@@ -301,7 +301,7 @@ class _GQAttention(nn.Module):
         num_kv_heads,
         head_dim,
         dropout=0.1,
-        max_position=512,
+        max_position=1024,
     ):
         super().__init__()
 
@@ -339,7 +339,7 @@ class _GQAttention(nn.Module):
         # ------------------------------
         # Rotary Position Embedding
         # ------------------------------
-        self.rope = RotaryEmbedding(head_dim)
+   
 
         # ------------------------------
         # Relative Position Bias
@@ -349,7 +349,7 @@ class _GQAttention(nn.Module):
             max_position=max_position,
         )
 
-    def forward(self, x):
+    def forward(self, x, cos, sin):
 
         B, T, _ = x.shape
 
@@ -383,6 +383,8 @@ class _GQAttention(nn.Module):
         # ------------------------------
         if self.num_q_heads != self.num_kv_heads:
 
+            assert self.num_q_heads % self.num_kv_heads == 0
+
             repeat = self.num_q_heads // self.num_kv_heads
 
             k = k.repeat_interleave(
@@ -398,8 +400,10 @@ class _GQAttention(nn.Module):
         # ------------------------------
         # Rotary Position Embedding
         # ------------------------------
-        q = self.rope(q)
-        k = self.rope(k)
+        cos = cos[:T].unsqueeze(0).unsqueeze(0)
+        sin = sin[:T].unsqueeze(0).unsqueeze(0)
+
+        q, k = _rope(q, k, cos, sin)
 
         # ------------------------------
         # Attention logits
@@ -482,7 +486,16 @@ class _TransformerBlock(nn.Module):
     def __init__(self, d_model: int, q_heads: int, kv_heads: int, mlp_ratio: int = 2, dropout=0.4, drop_path_rate=0.25):
         super().__init__()
         self.norm1 = nn.LayerNorm(d_model)
-        self.attn = _GQAttention(d_model, q_heads, kv_heads, dropout)
+        head_dim = d_model // q_heads
+
+        self.attn = _GQAttention(
+            embed_dim=d_model,
+            num_q_heads=q_heads,
+            num_kv_heads=kv_heads,
+            head_dim=head_dim,
+            dropout=dropout,
+            max_position=512,
+        )
         #self.drop_path = nn.Dropout(dropout)
         self.drop_path   = DropPath(drop_path_rate)  # for stochastic depth
         self.norm2 = nn.LayerNorm(d_model)
