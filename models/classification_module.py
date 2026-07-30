@@ -49,11 +49,11 @@ class ClassificationModule(pl.LightningModule):
             model,
             n_classes,
             lr=0.001,
-            weight_decay=0.0,
-            optimizer="adam",
-            scheduler=False,
+            weight_decay=0.01,
+            optimizer="adamW",
+            scheduler=True,
             max_epochs=1000,
-            warmup_epochs=20,
+            warmup_epochs=30,
             **kwargs
     ):
         super().__init__()
