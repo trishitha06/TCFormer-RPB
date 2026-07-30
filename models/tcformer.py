@@ -59,7 +59,7 @@ class MultiKernelConvBlock(nn.Module):
                 nn.ConstantPad2d((k//2-1, k//2, 0, 0) if k % 2 == 0 else (k//2, k//2, 0, 0), 0),
                 nn.Conv2d(1, F1, (1, k), bias=False),
                 nn.BatchNorm2d(F1),
-                # nn.ELU() 
+                nn.ELU() 
             )
             for k in temp_kernel_lengths
         ])
