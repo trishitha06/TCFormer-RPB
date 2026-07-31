@@ -483,7 +483,7 @@ class DropPath(nn.Module):
 # ---------------------------------------------------------
 #  Transformer encoder block (Pre‑LN, GQA, MLP‑GEGLU)
 class _TransformerBlock(nn.Module):
-    def __init__(self, d_model: int, q_heads: int, kv_heads: int, mlp_ratio: int = 4, dropout=0.4, drop_path_rate=0.25):
+    def __init__(self, d_model: int, q_heads: int, kv_heads: int, mlp_ratio: int = 2, dropout=0.4, drop_path_rate=0.25):
         super().__init__()
         self.norm1 = nn.LayerNorm(d_model)
         head_dim = d_model // q_heads
@@ -525,22 +525,22 @@ class TCFormerModule(nn.Module):
     def __init__(self,                 
             n_channels: int ,
             n_classes: int,
-            F1: int = 32,
-            temp_kernel_lengths=(8,16,32,64),
-            pool_length_1: int = 6,
-            pool_length_2: int = 6,
+            F1: int = 16,
+            temp_kernel_lengths=(16, 32, 64),
+            pool_length_1: int = 8,
+            pool_length_2: int = 7,
             D: int = 2,
-            dropout_conv: float = 0.2,
-            d_group: int = 32,
-            tcn_depth: int = 3,
+            dropout_conv: float = 0.3,
+            d_group: int = 16,
+            tcn_depth: int = 2,
             kernel_length_tcn: int = 4,
-            dropout_tcn: float = 0.2,
+            dropout_tcn: float = 0.3,
             use_group_attn: bool = True,
             kv_heads: int = 4, 
-            q_heads: int = 12, 
-            trans_dropout: float = 0.2,
-            drop_path_max: float = 0.1, 
-            trans_depth: int = 7,
+            q_heads: int = 8, 
+            trans_dropout: float = 0.4,
+            drop_path_max: float = 0.25, 
+            trans_depth: int = 5,
         ):
         super().__init__()
         self.n_classes = n_classes
@@ -619,21 +619,21 @@ class TCFormer(ClassificationModule):
     def __init__(self,
             n_channels: int,
             n_classes: int,
-            F1: int = 32,
-            temp_kernel_lengths=(8,16,32,64),
-            pool_length_1: int = 6,
-            pool_length_2: int = 6,
+            F1: int = 16,
+            temp_kernel_lengths: tuple = (16, 32, 64),
+            pool_length_1: int = 8,
+            pool_length_2: int = 7,
             D: int = 2,
-            dropout_conv: float = 0.2,
-            d_group: int = 32,
-            tcn_depth: int = 3,
+            dropout_conv: float = 0.3,
+            d_group: int = 16,
+            tcn_depth: int = 2,
             kernel_length_tcn: int = 4,
-            dropout_tcn: float = 0.2,
+            dropout_tcn: float = 0.3,
             use_group_attn: bool = True,
-            q_heads: int = 12, 
+            q_heads: int = 8, 
             kv_heads: int = 4,
-            trans_depth: int = 7,    
-            trans_dropout: float = 0.2,
+            trans_depth: int = 5,    
+            trans_dropout: float = 0.4,
             **kwargs
         ):
         model = TCFormerModule(
