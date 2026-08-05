@@ -48,10 +48,10 @@ class ClassificationModule(pl.LightningModule):
             self,
             model,
             n_classes,
-            lr=3e-4,
-            weight_decay=0.01,
-            optimizer="adamW",
-            scheduler=True,
+            lr=0.001,
+            weight_decay=0.0,
+            optimizer="adam",
+            scheduler=False,
             max_epochs=1000,
             warmup_epochs=20,
             **kwargs
@@ -130,7 +130,7 @@ class ClassificationModule(pl.LightningModule):
                 x, _ = select_random_channels(x, self.hparams.get("keep_ratio",0.9))
 
         y_hat = self.forward(x)
-        loss = F.cross_entropy(y_hat,y,label_smoothing=0.1)
+        loss = F.cross_entropy(y_hat, y)
         acc = accuracy(y_hat, y, task="multiclass", num_classes=self.hparams.n_classes)
         # log scalar metrics
         self.log(f"{mode}_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
