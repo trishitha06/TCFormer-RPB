@@ -316,24 +316,25 @@ class _GQAttention(nn.Module):
             num_q_heads * head_dim,
             bias=False,
         )
-
+        nn.init.xavier_uniform_(self.q_proj.weight)
         self.k_proj = nn.Linear(
             embed_dim,
             num_kv_heads * head_dim,
             bias=False,
         )
-
+        nn.init.xavier_uniform_(self.k_proj.weight)
         self.v_proj = nn.Linear(
             embed_dim,
             num_kv_heads * head_dim,
             bias=False,
         )
+        nn.init.xavier_uniform_(self.v_proj.weight)
 
         self.out_proj = nn.Linear(
             num_q_heads * head_dim,
             embed_dim,
         )
-
+        nn.init.xavier_uniform_(self.out_proj.weight)
         self.dropout = nn.Dropout(dropout)
 
         # ------------------------------
@@ -479,8 +480,46 @@ class DropPath(nn.Module):
         random_tensor.floor_()  # binarize
         output = x.div(keep_prob) * random_tensor
         return output
+# -----------------------------------------------------------
 
-# ---------------------------------------------------------
+class GEGLU(nn.Module):
+    
+    # GEGLU Feed Forward Network
+    
+
+    def __init__(self,
+                 d_model,
+                 expansion=4,
+                 dropout=0.3):
+
+        super().__init__()
+
+        hidden = expansion * d_model
+
+        self.proj = nn.Linear(
+            d_model,
+            hidden * 2
+        )
+
+        self.out = nn.Sequential(
+
+            nn.Linear(
+                hidden,
+                d_model
+            ),
+
+            nn.Dropout(dropout)
+
+        )
+
+    def forward(self, x):
+
+        x, gate = self.proj(x).chunk(2, dim=-1)
+
+        x = x * torch.nn.functional.gelu(gate)
+
+        return self.out(x)
+
 #  Transformer encoder block (Pre‑LN, GQA, MLP‑GEGLU)
 class _TransformerBlock(nn.Module):
     def __init__(self, d_model: int, q_heads: int, kv_heads: int, mlp_ratio: int = 2, dropout=0.4, drop_path_rate=0.25):
@@ -499,11 +538,10 @@ class _TransformerBlock(nn.Module):
         #self.drop_path = nn.Dropout(dropout)
         self.drop_path   = DropPath(drop_path_rate)  # for stochastic depth
         self.norm2 = nn.LayerNorm(d_model)
-        self.mlp = nn.Sequential(
-            nn.Linear(d_model, mlp_ratio * d_model),    # expands per-token features
-            nn.GELU(),                                      # non-linearity
-            nn.Linear(mlp_ratio * d_model, d_model),    # compresses back to d_model
-            nn.Dropout(dropout),                            # dropout# regularisation
+        self.mlp = GEGLU(
+            d_model=d_model,
+            expansion=mlp_ratio,
+            dropout=dropout
         )
     def forward(self, x: Tensor, cos: Tensor, sin: Tensor) -> Tensor:
         x = x + self.drop_path(self.attn(self.norm1(x), cos, sin))
@@ -525,22 +563,22 @@ class TCFormerModule(nn.Module):
     def __init__(self,                 
             n_channels: int ,
             n_classes: int,
-            F1: int = 16,
+            F1: int = 24,
             temp_kernel_lengths=(16, 32, 64),
             pool_length_1: int = 8,
             pool_length_2: int = 7,
             D: int = 2,
-            dropout_conv: float = 0.3,
-            d_group: int = 16,
+            dropout_conv: float = 0.2,
+            d_group: int = 24,
             tcn_depth: int = 2,
             kernel_length_tcn: int = 4,
-            dropout_tcn: float = 0.3,
+            dropout_tcn: float = 0.2,
             use_group_attn: bool = True,
             kv_heads: int = 4, 
-            q_heads: int = 8, 
-            trans_dropout: float = 0.4,
+            q_heads: int = 12, 
+            trans_dropout: float = 0.2,
             drop_path_max: float = 0.25, 
-            trans_depth: int = 5,
+            trans_depth: int = 6,
         ):
         super().__init__()
         self.n_classes = n_classes
